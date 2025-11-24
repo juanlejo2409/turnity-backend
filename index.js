@@ -1,12 +1,11 @@
-// index.js
+require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
-const dotenv = require("dotenv");
+const mongoose = require("mongoose");
 
-dotenv.config();
-
-const authRoutes = require("./routes/auth");
+// Rutas
+const authRoutes = require("./routes/auth");      // si la carpeta se llama distinto, ajusta
+const serviciosRoutes = require("./routes/servicios"); // igual aquí si cambió
 
 const app = express();
 
@@ -14,24 +13,35 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ruta simple para probar que el backend responde
+// Ruta básica para probar que el server responde
 app.get("/", (req, res) => {
   res.send("Turnity API funcionando ✅");
 });
 
-// Rutas de autenticación
 app.use("/api/auth", authRoutes);
+app.use("/api/servicios", serviciosRoutes);
 
-// Conexión a MongoDB Atlas y arranque del servidor
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("✅ Conectado a MongoDB Atlas");
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      console.log(`🚀 Backend Turnity escuchando en http://localhost:${port}`);
+// Puerto de Render
+const PORT = process.env.PORT || 3000;
+
+// Conexión a Mongo y arranque del servidor
+async function startServer() {
+  try {
+    console.log("Conectando a MongoDB...");
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
-  })
-  .catch((err) => {
-    console.error("❌ Error conectando a MongoDB:", err);
-  });
+
+    console.log("✅ MongoDB conectado");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor Turnity escuchando en puerto ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Error conectando a MongoDB:", err.message);
+    process.exit(1); // si falla, Render ve el error y corta
+  }
+}
+
+startServer();
