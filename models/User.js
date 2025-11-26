@@ -3,34 +3,8 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    role: {
-      type: String,
-      enum: ["usuario", "negocio"],
-      required: true,
-      default: "usuario",
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    business: {
-      type: String,
-      trim: true,
-    },
-    country: {
-      type: String,
-      enum: ["CO", "MX", "CL", "ES", "US"],
-      default: "CO",
-    },
-    city: {
-      type: String,
-      trim: true,
-    },
-    neighborhood: {
-      type: String,
-      trim: true,
-    },
+    name: { type: String, required: true },
+
     email: {
       type: String,
       required: true,
@@ -38,12 +12,29 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    passwordHash: {
+
+    password: { type: String, required: true },
+
+    // 👇 ahora soporta los 3 roles
+    role: {
       type: String,
-      required: true,
+      enum: ["usuario", "negocio", "trabajador"],
+      default: "usuario",
     },
+
+    country: { type: String, default: "CO" },
+    city: { type: String, default: "" },
+    neighborhood: { type: String, default: "" },
+
+    // Para dueños de negocio (rol "negocio")
+    business: { type: String, default: "" },
+
+    // Para dueños y trabajadores: ID del negocio tipo "T-XXXXX"
+    businessId: { type: String, default: "" },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 module.exports = mongoose.model("User", userSchema);
