@@ -4,9 +4,13 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-const app = express();
-
+const serviciosRoutes = require("./routes/servicios.routes");
 const authRoutes = require("./routes/auth");
+
+// 👇 Asegúrate de que este archivo exista: routes/business.routes.js
+const businessRoutes = require("./routes/business.routes");
+
+const app = express();
 
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -15,13 +19,21 @@ const MONGODB_URI = process.env.MONGODB_URI;
 app.use(cors());
 app.use(express.json());
 
-// Ruta de prueba
+// Ruta raíz de prueba
 app.get("/", (req, res) => {
   res.send("Turnity API funcionando ✅");
 });
 
-// Rutas
+// 🔥 RUTA DE PRUEBA DIRECTA para /api/business
+// Esto NO depende del archivo business.routes.js
+app.get("/api/business", (req, res) => {
+  res.send("Ruta /api/business definida directamente en index.js 👍");
+});
+
+// Rutas normales
 app.use("/api/auth", authRoutes);
+app.use("/api/servicios", serviciosRoutes);
+app.use("/api/business", businessRoutes); // cuando esté bien, usaremos esto
 
 // ===== Iniciar servidor y conectar a MongoDB =====
 async function startServer() {
@@ -31,7 +43,6 @@ async function startServer() {
     }
 
     console.log("Conectando a MongoDB...");
-    // 👇 AQUÍ está el cambio: SIN opciones extra
     await mongoose.connect(MONGODB_URI);
 
     console.log("✅ MongoDB conectado correctamente");
@@ -41,7 +52,7 @@ async function startServer() {
     });
   } catch (error) {
     console.error("❌ Error al iniciar el servidor:", error.message);
-    process.exit(1); // Para que Render vea claramente el fallo si algo sale mal
+    process.exit(1);
   }
 }
 

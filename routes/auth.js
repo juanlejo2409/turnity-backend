@@ -56,6 +56,7 @@ router.post("/register", async (req, res) => {
         name: user.name,
         email: user.email,
         country: user.country,
+        business: user.business
       },
       token,
     });
@@ -100,6 +101,7 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         country: user.country,
+        business: user.business,
       },
       token,
     });
