@@ -3,12 +3,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-
 const serviciosRoutes = require("./routes/servicios.routes");
 const authRoutes = require("./routes/auth");
-
-// 👇 Asegúrate de que este archivo exista: routes/business.routes.js
-const businessRoutes = require("./routes/business.routes");
+const businessRoutes = require("./routes/business");
 
 const app = express();
 
@@ -22,12 +19,6 @@ app.use(express.json());
 // Ruta raíz de prueba
 app.get("/", (req, res) => {
   res.send("Turnity API funcionando ✅");
-});
-
-// 🔥 RUTA DE PRUEBA DIRECTA para /api/business
-// Esto NO depende del archivo business.routes.js
-app.get("/api/business", (req, res) => {
-  res.send("Ruta /api/business definida directamente en index.js 👍");
 });
 
 // Rutas normales
