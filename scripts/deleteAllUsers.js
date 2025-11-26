@@ -1,9 +1,10 @@
 // scripts/deleteAllUsers.js
 require("dotenv").config();
 const mongoose = require("mongoose");
+const path = require("path");
 
-// 👇 AJUSTA ESTA RUTA SI TU MODELO SE LLAMA DISTINTO
-const User = require("../models/User");
+// Importar el modelo User
+const User = require(path.join(__dirname, "..", "models", "User"));
 
 async function main() {
   try {
