@@ -3,7 +3,11 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
     email: {
       type: String,
@@ -13,24 +17,28 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: true,
+    },
 
-    // 👇 ahora soporta los 3 roles
+    // 👇 IMPORTANTE: incluimos "trabajador"
     role: {
       type: String,
       enum: ["usuario", "negocio", "trabajador"],
       default: "usuario",
     },
 
-    country: { type: String, default: "CO" },
-    city: { type: String, default: "" },
-    neighborhood: { type: String, default: "" },
+    // Datos de localización
+    country: { type: String, default: null },
+    city: { type: String, default: null },
+    neighborhood: { type: String, default: null },
 
-    // Para dueños de negocio (rol "negocio")
-    business: { type: String, default: "" },
+    // Datos específicos de negocio
+    businessName: { type: String, default: null }, // para rol "negocio"
 
-    // Para dueños y trabajadores: ID del negocio tipo "T-XXXXX"
-    businessId: { type: String, default: "" },
+    // Para trabajadores: a qué negocio pertenecen
+    businessId: { type: String, default: null }, // ID de negocio T-XXXXXX
   },
   {
     timestamps: true,

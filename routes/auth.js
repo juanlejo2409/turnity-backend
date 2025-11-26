@@ -1,11 +1,20 @@
 // routes/auth.js
 const express = require("express");
-const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-const JWT_SECRET = process.env.JWT_SECRET || "supersecreturnity";
+const router = express.Router();
+
+// Función auxiliar para generar un ID de negocio tipo T-XXXXX
+function generateBusinessId() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "T-";
+  for (let i = 0; i < 5; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
 
 // ====== REGISTRO ======
 router.post("/register", async (req, res) => {
@@ -14,68 +23,79 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password,
-      role,        // "usuario" | "negocio" | "trabajador"
+      role,
       country,
       city,
       neighborhood,
-      business,    // solo si rol === "negocio"
-      businessId,  // solo si rol === "trabajador" (y opcionalmente negocio)
+      business,      // nombre del negocio (solo para role=negocio)
+      businessId,    // ID del negocio (solo para role=trabajador)
     } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Nombre, correo y contraseña son obligatorios." });
     }
 
-    // ¿Ya existe ese correo?
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) {
-      return res.status(400).json({ message: "El correo ya está registrado en Turnity." });
+      return res.status(400).json({ message: "Este correo ya está registrado." });
     }
 
-    // Validaciones básicas según rol
-    if (role === "negocio" && !business) {
-      return res.status(400).json({
-        message: "Debes ingresar el nombre del negocio para crear una cuenta de negocio.",
-      });
-    }
+    const hashed = await bcrypt.hash(password, 10);
 
-    if (role === "trabajador" && !businessId) {
-      return res.status(400).json({
-        message: "Debes ingresar el ID del negocio para registrarte como trabajador.",
-      });
-    }
+    const finalRole = role || "usuario";
 
-    // Encriptar contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashed = await bcrypt.hash(password, salt);
-
-    const user = new User({
+    const userData = {
       name,
       email: email.toLowerCase().trim(),
       password: hashed,
-      role: role || "usuario",
+      role: finalRole,
       country: country || "CO",
       city: city || "",
       neighborhood: neighborhood || "",
-      business: role === "negocio" ? (business || "") : "",
-      // Si es negocio, podemos guardar su propio businessId más adelante cuando
-      // lo generes definitivamente desde el panel.
-      businessId: role === "trabajador" ? businessId : "",
-    });
+      business: "",
+      businessId: "",
+    };
 
+    // Si es negocio: generamos un businessId nuevo y guardamos el nombre del negocio
+    if (finalRole === "negocio") {
+      userData.business = business || "";
+      userData.businessId = generateBusinessId();
+    }
+
+    // Si es trabajador: se vincula al businessId que llega del frontend
+    if (finalRole === "trabajador") {
+      if (!businessId) {
+        return res
+          .status(400)
+          .json({ message: "Debes indicar el ID del negocio para registrarte como trabajador." });
+      }
+
+      // (Opcional pero recomendado) verificar que exista un negocio con ese businessId
+      const owner = await User.findOne({ role: "negocio", businessId: businessId.trim() });
+      if (!owner) {
+        return res
+          .status(404)
+          .json({ message: "No se encontró un negocio con ese ID. Verifica el código." });
+      }
+
+      userData.businessId = businessId.trim();
+      // Podrías copiar el nombre del negocio si quieres:
+      userData.business = owner.business || "";
+    }
+
+    const user = new User(userData);
     await user.save();
 
-    // Crear token
     const payload = {
       id: user._id,
       role: user.role,
-      email: user.email,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "supersecret", {
+      expiresIn: "7d",
+    });
 
-    // Respuesta homogénea con lo que espera el frontend
-    res.status(201).json({
+    return res.status(201).json({
       message: "Usuario registrado correctamente.",
       token,
       user: {
@@ -91,8 +111,8 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en /api/auth/register:", error);
-    res.status(500).json({ message: "Error en el servidor al registrar usuario." });
+    console.error("Error en /register:", error);
+    return res.status(500).json({ message: "Error interno al registrar el usuario." });
   }
 });
 
@@ -107,7 +127,7 @@ router.post("/login", async (req, res) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      return res.status(404).json({ message: "Usuario no existe." });
+      return res.status(404).json({ message: "Usuario no encontrado." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -118,12 +138,13 @@ router.post("/login", async (req, res) => {
     const payload = {
       id: user._id,
       role: user.role,
-      email: user.email,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "supersecret", {
+      expiresIn: "7d",
+    });
 
-    res.json({
+    return res.json({
       message: "Login correcto.",
       token,
       user: {
@@ -139,9 +160,14 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error en /api/auth/login:", error);
-    res.status(500).json({ message: "Error en el servidor al iniciar sesión." });
+    console.error("Error en /login:", error);
+    return res.status(500).json({ message: "Error interno al iniciar sesión." });
   }
+});
+
+// (Opcional) Ruta para probar el token
+router.get("/me", async (req, res) => {
+  return res.send("Auth OK");
 });
 
 module.exports = router;
